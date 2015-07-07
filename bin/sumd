@@ -3,7 +3,9 @@
 # Add cwd-relative lib to path
 import os
 import sys
-sys.path.append("lib")
+
+dirname = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(dirname, 'lib'))
 
 # Misc standard library imports
 import time
@@ -51,6 +53,7 @@ parser.add_option("--log-dir", dest="log_directory", default="/var/log", help="D
 parser.add_option("--config-dir", dest="config_directory", default="/etc/sumd", help="Root path where tasks.d and tags.d can be found")
 parser.add_option("--run-dir", dest="run_directory", default="/var/run", help="Directory for where pidfiles should be placed")
 parser.add_option("--foreground", dest="foreground", action='store_true', default=False, help="Don't daemonize.")
+parser.add_option("--suspend", dest="suspend", default=0, help="Suspend time before task starting.")
 parser.add_option("--debug", dest="debug", action='store_true', default=False, help="Increase logger verbosity")
 parser.add_option("--client-key-file", dest="client_key_file", help="Path to client SSL key file")
 parser.add_option("--client-cert-file", dest="client_cert_file", help="Path to client SSL cert file")
@@ -128,18 +131,22 @@ def load_configs(schedule):
         schedule.add(task)
 
 def riemann_client():
-    if options.client_key_file != None and options.client_cert_file != None:
-        riemann = bernhard.SSLClient(
-            host=options.riemann_host,
-            port=options.riemann_port,
-            keyfile=options.client_key_file,
-            certfile=options.client_cert_file,
-            ca_certs=options.ca_certs_file)
-    else:
-        riemann = bernhard.Client(
-            host=options.riemann_host,
-            port=options.riemann_port,
-            transport=bernhard.UDPTransport)
+    riemann = []
+    if type(options.riemann_host) not in (list, tuple):
+            options.riemann_host = [options.riemann_host]
+    for h in options.riemann_host:
+        if options.client_key_file != None and options.client_cert_file != None:
+            riemann.append(bernhard.SSLClient(
+                host=h,
+                port=options.riemann_port,
+                keyfile=options.client_key_file,
+                certfile=options.client_cert_file,
+                ca_certs=options.ca_certs_file))
+        else:
+            riemann.append(bernhard.Client(
+                host=h,
+                port=options.riemann_port,
+                transport=bernhard.UDPTransport))
 
     return riemann
 
@@ -162,6 +169,11 @@ def main():
 
     if not options.foreground:
         log.info("Creating pidfile with PID: %s" % (pidfile(create=True)))
+
+    if options.suspend:
+        log.info("Suspend tasks for {}s".format(options.suspend))
+        time.sleep(float(options.suspend))
+        log.info("Continue to start.")
 
     # Create scheduler
     schedule = scheduler.TaskSchedule()

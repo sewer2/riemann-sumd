@@ -37,6 +37,13 @@ tags: ['flapper', 'notify']
 
 
 # If omitted, defaults to system's hostname
+# Can be list like this
+# host:
+#   - "host1.example.com"
+#   - "host2.example.com"
+# or this:
+# host: ["host1.example.com", "host2.example.com"]
+# In this case message will be sent to all hosts.
 host: "myhost.example.com"
 
 # Set arbitrary attributes, optional

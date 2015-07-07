@@ -21,11 +21,12 @@ class EventSender(threading.Thread):
             log.debug("Sending %s events..." % (len(events)))
             while len(events) > 0:
                 event = events.pop(0)
-                try:
-                    log.debug("Event: %s" % (event.dict()))
-                    self.riemann.send(event.dict())
-                except socket.error:
-                    log.error("Unable to send event '%s' to %s:%s" % (event.service, self.riemann.host, self.riemann.port))
+                log.debug("Event: %s" % (event.dict()))
+                for r in self.riemann:
+                    try:
+                        r.send(event.dict())
+                    except socket.error:
+                        log.error("Unable to send event '%s' to %s:%s" % (event.service, r.host, r.port))
         else:
             log.warning("Send called with no events to send.")
 
